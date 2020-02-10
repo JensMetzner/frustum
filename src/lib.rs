@@ -1,5 +1,6 @@
 mod frustum;
 mod frustum_path;
+mod spline;
 mod types;
 
 pub use crate::frustum::Frustum;

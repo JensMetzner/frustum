@@ -108,24 +108,23 @@ fn test_screen_proj_view() {
     );
 }
 
-use frustum::*;
-#[test]
-fn test_frustum_path() {
-    let frustum_path = FrustumPath {
-        key_frames: vec![Frustum {
-            origin: Point3::<WorldSpace>::new(0.0, 0.0, 10.0),
-            target: Point3::<WorldSpace>::new(0.0, 0.0, 0.0),
-            fovy: 45.0,
-            ncp: 1.0,
-            fcp: 20.0,
-            width: 500,
-            height: 500,
-        }],
-        frames_per_unit: 24,
-    };
+// #[test]
+// fn test_frustum_path() {
+//     let frustum_path = FrustumPath {
+//         key_frames: vec![Frustum {
+//             origin: Point3::<WorldSpace>::new(0.0, 0.0, 10.0),
+//             target: Point3::<WorldSpace>::new(0.0, 0.0, 0.0),
+//             fovy: 45.0,
+//             ncp: 1.0,
+//             fcp: 20.0,
+//             width: 500,
+//             height: 500,
+//         }],
+//         frames_per_unit: 24,
+//     };
 
-    for frustum in frustum_path.iter() {
-        println!("{:?}", frustum);
-    }
-    assert_eq!(false, true);
-}
+//     for frustum in frustum_path.iter() {
+//         println!("{:?}", frustum);
+//     }
+//     assert_eq!(false, true);
+// }
