@@ -1,10 +1,13 @@
 use crate::types::*;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 const UP: Vec3<WorldSpace> = Vec3::<WorldSpace>::new(0.0, 1.0, 0.0);
 
 /// Frustum struct
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Copy, Clone)]
 pub struct Frustum {
     pub origin: Point3<WorldSpace>,
     pub target: Point3<WorldSpace>,
@@ -91,10 +94,11 @@ impl Frustum {
         )
     }
 
+    /// Calculate for a given screen space coordinate the corresponding ray origin and direction on the near clipping plane.
     pub fn ray_from_ncp(
         &self,
         screen_coords: &Point2<ScreenSpace>,
-    ) -> (Point3<WorldSpace>, Vec3<WorldSpace>) {
+    ) -> Option<(Point3<WorldSpace>, Vec3<WorldSpace>)> {
         let view = self.view().inverse().expect("Inversing view failed.");
         let projection = self
             .projection()
@@ -105,12 +109,11 @@ impl Frustum {
         let ro = screen
             .post_transform(&projection)
             .post_transform(&view)
-            .transform_point3d(screen_coords.to_3d())
-            .expect("Transform screen point to world space failed.");
+            .transform_point3d(screen_coords.to_3d())?;
 
         let rd = (ro - self.origin).normalize();
 
-        (ro, rd)
+        Some((ro, rd))
     }
 
     pub fn distance(&self, position: &Point3<WorldSpace>) -> f64 {
