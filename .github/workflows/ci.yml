@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run fmt
+      run: cargo fmt -- --check
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test
+    - name: Login
+      run: cargo login ${{ secrets.CRATESIO_TOKEN }}
+    - name: Publish
+      run: cargo publish --dry-run && cargo publish

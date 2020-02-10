@@ -1,0 +1,19 @@
+[package]
+name = "frustum"
+version = "0.1.0"
+authors = ["Jens Metzner <jens.metzner@uni-konstanz.de>"]
+edition = "2018"
+description = "Simple library to set up a frustum, such as a camera."
+license = "MIT AND Apache-2.0"
+documentation = "https://docs.rs/frustum/"
+repository = "https://github.com/jensmetzner/frustum"
+keywords = ["frustum", "camera", "ray-tracing"]
+categories = ["science"]
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
+
+[dependencies]
+euclid = { version = "0.20.7", features = ["serde"] }
+serde = { version = "1.0.104", features = ["derive"] }
