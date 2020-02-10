@@ -1,5 +1,4 @@
 use crate::types::*;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 

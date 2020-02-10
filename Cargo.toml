@@ -17,3 +17,6 @@ include = [
 [dependencies]
 euclid = { version = "0.20.7", features = ["serde"] }
 serde = { version = "1.0.104", features = ["derive"], optional = true, default-features = false }
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
