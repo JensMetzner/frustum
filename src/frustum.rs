@@ -13,8 +13,8 @@ pub struct Frustum {
     pub fovy: f64,
     pub ncp: f64,
     pub fcp: f64,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
 }
 
 impl Frustum {
@@ -117,5 +117,46 @@ impl Frustum {
 
     pub fn distance(&self, position: &Point3<WorldSpace>) -> f64 {
         (self.origin - *position).length() - self.ncp
+    }
+
+    pub fn iter(&self) -> FrustumIterator {
+        FrustumIterator {
+            frustum: self,
+            x: 0,
+            y: 0,
+        }
+    }
+}
+
+pub struct FrustumIterator<'a> {
+    frustum: &'a Frustum,
+    x: usize,
+    y: usize,
+}
+
+impl<'a> Iterator for FrustumIterator<'a> {
+    type Item = (Point3<WorldSpace>, Vec3<WorldSpace>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.x >= self.frustum.width {
+            self.x = 0;
+            self.y += 1;
+        }
+
+        if self.y >= self.frustum.height {
+            None
+        } else {
+            let t = self
+                .frustum
+                .ray_from_ncp(&Point2::<ScreenSpace>::new(self.x as f64, self.y as f64));
+            self.x += 1;
+            t
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = (self.frustum.width * self.frustum.height) as usize;
+        let done = self.x + self.y * self.frustum.width as usize;
+        (size - done, Some(size - done))
     }
 }
