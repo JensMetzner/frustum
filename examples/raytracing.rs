@@ -1,5 +1,6 @@
 use frustum::{Frustum, Point3, Vec3, WorldSpace};
 use palette::*;
+use rayon::prelude::*;
 
 pub struct Sphere {
     origin: Point3<WorldSpace>,
@@ -87,7 +88,7 @@ fn main() {
     };
 
     let data = camera
-        .iter()
+        .par_iter()
         .map(|(ro, rd)| {
             let color: Srgb = match sphere.intersect(&ro, &rd) {
                 Some((target, _)) => sphere.color(&target, &light, &camera.origin),
