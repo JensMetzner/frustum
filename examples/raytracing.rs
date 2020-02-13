@@ -88,10 +88,14 @@ fn main() {
     };
 
     let data = camera
+        .iter()
+        .collect::<Vec<_>>()
         .par_iter()
-        .map(|(ro, rd)| {
+        .map(|(_x, _y, ro, rd)| {
             let color: Srgb = match sphere.intersect(&ro, &rd) {
-                Some((target, _)) => sphere.color(&target, &light, &camera.origin),
+                Some((target, _)) => {
+                    sphere.color(&target, &light, &camera.origin)
+                }
                 None => palette::Lab::new(100., 0., 0.),
             }
             .into();
@@ -112,7 +116,7 @@ fn main() {
         image::ColorType::Rgb8,
     )
     .unwrap_or_else(|err| {
-        println!("Cannot generate photorealistic image: {}", err);
+        println!("Cannot save photorealistic image: {}", err);
         std::process::exit(4);
     });
 }

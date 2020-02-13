@@ -1,5 +1,5 @@
 use crate::frustum::Frustum;
-// use crate::spline::catmull_rom_3d;
+use crate::spline::{Spline, Spline3};
 
 #[cfg_attr(
     feature = "serialization",
@@ -9,76 +9,90 @@ use crate::frustum::Frustum;
 pub struct FrustumPath {
     pub key_frustums: Vec<Frustum>,
     pub frames_per_unit: u32,
-    #[cfg_attr(feature = "serialization", serde(skip))]
-    interpolated_frustums: Option<Vec<Frustum>>,
 }
 
-// impl FrustumPath {
-//     fn path_length(&self) -> f64 {
-//     }
+impl FrustumPath {
+    pub fn iter<'a>(&'a self) -> FrustumPathIterator<'a> {
+        let origins = self
+            .key_frustums
+            .iter()
+            .map(|frustum| frustum.origin)
+            .collect::<Vec<_>>();
+        let targets = self
+            .key_frustums
+            .iter()
+            .map(|frustum| frustum.target)
+            .collect::<Vec<_>>();
 
-//     fn get_control_points_for_segment(&self, segment_id: usize) -> (usize, usize, usize, usize) {
-//         let cp0 = segment_id.min(self.key_frustums.len() - 2) - 1;
+        let (_, origin_segments_length) = Spline3::length(&origins);
+        let (_, target_segments_length) = Spline3::length(&targets);
 
-//         (
-//             cp0.max(0),
-//             cp0 + 1,
-//             cp0 + 2,
-//             (cp0 + 3).min(self.key_frustums.len() - 1),
-//         )
-//     }
+        let longer_segments = origin_segments_length
+            .iter()
+            .zip(target_segments_length.iter())
+            .map(|(o, t)| {
+                if o >= t {
+                    LongerSegment::Origin(*o)
+                } else {
+                    LongerSegment::Target(*t)
+                }
+            })
+            .collect::<Vec<_>>();
 
-//     fn get_length_for_segment(&self, segment_id: usize) -> f64 {
-//         let (cp0, cp1, cp2, cp3) = self.get_control_points_for_segment(segment_id);
+        let path_length = longer_segments.iter().map(|s| s.value()).sum();
 
-//         let mut last = self.key_frustums[segment_id].origin;
-//         if (last - self.key_frustums[segment_id + 1].origin).length() < std::f64::EPSILON {
-//             return 0.;
-//         }
-//         let mut length = 0.0;
-//         for i in 0..10000 {
-//             let t = i as f64 * 0.0001;
-//             let current = catmull_rom_3d(
-//                 &self.key_frustums[cp0].origin,
-//                 &self.key_frustums[cp1].origin,
-//                 &self.key_frustums[cp2].origin,
-//                 &self.key_frustums[cp3].origin,
-//                 t,
-//             );
-//             length += (current - last).length();
-//             last = current;
-//         }
-//         length
-//     }
-// }
+        FrustumPathIterator {
+            frustum_path: self,
+            path_length,
+            position_on_path: 0.,
+            longer_segments,
+            current_segment: 0,
+        }
+    }
+}
 
-// impl FrustumPath {
-//     pub fn iter<'a>(&'a self) -> FrustumPathIterator<'a> {
-//         FrustumPathIterator {
-//             frustum_path: self,
-//             current_idx: 0,
-//         }
-//     }
-// }
+enum LongerSegment {
+    Origin(f64),
+    Target(f64),
+}
 
-// pub struct FrustumPathIterator<'a> {
-//     frustum_path: &'a FrustumPath,
-//     current_idx: u32,
-// }
+impl LongerSegment {
+    fn value(&self) -> &f64 {
+        match self {
+            Self::Origin(v) => v,
+            Self::Target(v) => v,
+        }
+    }
+}
 
-// impl<'a> Iterator for FrustumPathIterator<'a> {
-//     type Item = Frustum;
+pub struct FrustumPathIterator<'a> {
+    frustum_path: &'a FrustumPath,
+    path_length: f64,
+    position_on_path: f64,
+    longer_segments: Vec<LongerSegment>,
+    current_segment: usize,
+}
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.path_length > 0.0 {
-//             None
-//         } else {
-//             self.path_length += 1.0;
-//             Some(self.path.key_frustums[0])
-//         }
-//     }
+impl<'a> FrustumPathIterator<'a> {}
 
-//     fn size_hint(&self) -> (usize, Option<usize>) {
-//         (0, Some(5))
-//     }
-// }
+impl<'a> Iterator for FrustumPathIterator<'a> {
+    type Item = Frustum;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position_on_path < 0.
+            || self.position_on_path > self.path_length
+        {
+            return None;
+        }
+
+        // TODO
+
+        // self.path_length += 1.0;
+        // Some(self.path.key_frustums[0])
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(5))
+    }
+}

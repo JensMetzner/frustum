@@ -94,7 +94,8 @@ impl Frustum {
         )
     }
 
-    /// Calculate for a given screen space coordinate the corresponding ray origin and direction on the near clipping plane.
+    /// Calculate for a given screen space coordinate the corresponding
+    /// ray origin and direction on the near clipping plane.
     pub fn ray_from_ncp(
         &self,
         screen_coords: &Point2<ScreenSpace>,
@@ -123,102 +124,54 @@ impl Frustum {
     pub fn iter(&self) -> FrustumIterator {
         FrustumIterator {
             frustum: self,
-            position: [0, (self.width * self.height) - 1],
-            is_done: false,
+            x: 0,
+            y: 0,
+            width: self.width,
+            height: self.height,
         }
     }
 }
 
 pub struct FrustumIterator<'a> {
     pub frustum: &'a Frustum,
-    pub position: [usize; 2],
-    pub is_done: bool,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
 }
 
 impl<'a> Iterator for FrustumIterator<'a> {
-    type Item = (Point3<WorldSpace>, Vec3<WorldSpace>);
-    // type Item = (usize, usize);
+    type Item = (usize, usize, Point3<WorldSpace>, Vec3<WorldSpace>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.is_done {
-            return None;
+        if self.x >= self.width {
+            self.x = 0;
+            self.y += 1;
         }
 
-        let x = self.position[0] % self.frustum.width;
-        let y = self.position[0] / self.frustum.width;
-
-        let t = self
-            .frustum
-            .ray_from_ncp(&Point2::<ScreenSpace>::new(x as f64, y as f64));
-        // let t = Some((x, y));
-
-        if self.position[0] >= self.position[1] {
-            self.is_done = true;
+        if self.y >= self.height {
+            None
         } else {
-            self.position[0] += 1;
-        }
+            let (ro, rd) = self
+                .frustum
+                .ray_from_ncp(&Point2::<ScreenSpace>::new(
+                    self.x as f64,
+                    self.y as f64,
+                ))
+                .expect("Fatal: Point not in screen space.");
 
-        t
+            let p = (self.x, self.y, ro, rd);
+
+            self.x += 1;
+
+            Some(p)
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len(), Some(self.len()))
+        (
+            self.width * self.height - (self.x + self.y * self.width),
+            Some(self.width * self.height),
+        )
     }
 }
-
-impl<'a> ExactSizeIterator for FrustumIterator<'a> {
-    fn len(&self) -> usize {
-        self.position[1] - self.position[0]
-    }
-}
-
-impl<'a> DoubleEndedIterator for FrustumIterator<'a> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.is_done {
-            return None;
-        }
-
-        let x = self.position[1] as usize % self.frustum.width;
-        let y = self.position[1] as usize / self.frustum.width;
-
-        let t = self
-            .frustum
-            .ray_from_ncp(&Point2::<ScreenSpace>::new(x as f64, y as f64));
-        // let t = Some((x, y));
-
-        if self.position[0] >= self.position[1] {
-            self.is_done = true;
-        } else {
-            self.position[1] -= 1;
-        }
-        t
-    }
-}
-
-// #[test]
-// fn name() {
-//     let camera = Frustum {
-//         origin: Point3::<WorldSpace>::new(0.0, 0.0, 10.0),
-//         target: Point3::<WorldSpace>::new(0.0, 0.0, 0.0),
-//         fovy: 45.0,
-//         ncp: 1.0,
-//         fcp: 20.0,
-//         width: 5,
-//         height: 5,
-//     };
-
-//     let mut it = camera.iter();
-
-//     for y in 0..=2usize {
-//         for x in 0..=4usize {
-//             assert_eq!(dbg!(it.next()), dbg!(Some((x, y))));
-//         }
-//     }
-//     for y in (3..=4usize).rev() {
-//         for x in (0..=4usize).rev() {
-//             assert_eq!(dbg!(it.next_back()), dbg!(Some((x, y))));
-//         }
-//     }
-
-//     assert_eq!(it.next(), None)
-// }

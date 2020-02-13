@@ -1,5 +1,3 @@
-mod external_trait_impls;
-
 mod types;
 pub use crate::types::*;
 
@@ -11,8 +9,3 @@ mod frustum_path;
 mod spline;
 
 pub use crate::frustum_path::FrustumPath;
-
-#[cfg(feature = "rayon")]
-pub mod rayon {
-    pub use crate::external_trait_impls::rayon::frustum::*;
-}
