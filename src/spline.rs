@@ -1,22 +1,65 @@
 use crate::types::*;
 
 pub trait Spline<T> {
+    fn catmull_rom(v1: &T, v2: &T, v3: &T, v4: &T, s: f64) -> T;
+    fn length_for_segment(values: &Vec<T>, segment_idx: usize) -> f64;
+
     fn get_control_points_for_segment(
-        values: &Vec<T>,
-        segment_id: usize,
-    ) -> (&T, &T, &T, &T) {
-        let cp0 = segment_id.min(values.len() - 2) - 1;
+        segment_idx: usize,
+        path_length: usize,
+    ) -> (usize, usize, usize, usize) {
+        let cp0 = (segment_idx as isize).min(path_length as isize - 2) - 1;
         (
-            &values[cp0.max(0)],
-            &values[cp0 + 1],
-            &values[cp0 + 2],
-            &values[(cp0 + 3).min(values.len() - 1)],
+            cp0.max(0) as usize,
+            (cp0 + 1) as usize,
+            (cp0 + 2) as usize,
+            (cp0 + 3).min(path_length as isize - 1) as usize,
         )
     }
 
-    fn catmull_rom(v1: &T, v2: &T, v3: &T, v4: &T, s: f64) -> T;
-    fn length_for_segment(values: &Vec<T>, segment_id: usize) -> f64;
-    fn length(values: &Vec<T>) -> (f64, Vec<f64>);
+    fn length(values: &Vec<T>) -> (f64, Vec<f64>) {
+        let segment_lengths = (0..values.len() - 1)
+            .map(|i| Self::length_for_segment(values, i))
+            .collect::<Vec<_>>();
+
+        (segment_lengths.iter().sum(), segment_lengths)
+    }
+}
+
+pub struct Spline1;
+
+impl Spline<f64> for Spline1 {
+    fn catmull_rom(v1: &f64, v2: &f64, v3: &f64, v4: &f64, s: f64) -> f64 {
+        let s2 = s * s;
+        let s3 = s2 * s;
+        let f1 = -s3 + 2. * s2 - s;
+        let f2 = 3. * s3 - 5. * s2 + 2.;
+        let f3 = -3. * s3 + 4. * s2 + s;
+        let f4 = s3 - s2;
+
+        (v1 * f1 + v2 * f2 + v3 * f3 + v4 * f4) * 0.5
+    }
+
+    fn length_for_segment(values: &Vec<f64>, segment_idx: usize) -> f64 {
+        let (idx0, idx1, idx2, idx3) =
+            Self::get_control_points_for_segment(segment_idx, values.len());
+
+        let (cp0, cp1, cp2, cp3) =
+            (&values[idx0], &values[idx1], &values[idx2], &values[idx3]);
+
+        let mut last = *cp1;
+        if cp1 - cp2 < std::f64::EPSILON {
+            return 0.;
+        }
+        let mut length = 0.0;
+        for i in 0..1000 {
+            let t = i as f64 * 0.001;
+            let current = Self::catmull_rom(cp0, cp1, cp2, cp3, t);
+            length += current - last;
+            last = current;
+        }
+        length
+    }
 }
 
 pub struct Spline3;
@@ -45,10 +88,13 @@ impl Spline<Point3<WorldSpace>> for Spline3 {
 
     fn length_for_segment(
         values: &Vec<Point3<WorldSpace>>,
-        segment_id: usize,
+        segment_idx: usize,
     ) -> f64 {
+        let (idx0, idx1, idx2, idx3) =
+            Self::get_control_points_for_segment(segment_idx, values.len());
+
         let (cp0, cp1, cp2, cp3) =
-            Self::get_control_points_for_segment(values, segment_id);
+            (&values[idx0], &values[idx1], &values[idx2], &values[idx3]);
 
         let mut last = *cp1;
         if (*cp1 - *cp2).length() < std::f64::EPSILON {
@@ -62,14 +108,6 @@ impl Spline<Point3<WorldSpace>> for Spline3 {
             last = current;
         }
         length
-    }
-
-    fn length(values: &Vec<Point3<WorldSpace>>) -> (f64, Vec<f64>) {
-        let segment_lengths = (0..values.len() - 1)
-            .map(|i| Self::length_for_segment(values, i))
-            .collect::<Vec<_>>();
-
-        (segment_lengths.iter().sum(), segment_lengths)
     }
 }
 
