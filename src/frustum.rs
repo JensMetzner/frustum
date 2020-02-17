@@ -1,12 +1,12 @@
 use crate::types::*;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 const UP: Vec3<WorldSpace> = Vec3::<WorldSpace>::new(0.0, 1.0, 0.0);
 
 /// Frustum struct
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 #[derive(Debug, Copy, Clone)]
 pub struct Frustum {
     pub origin: Point3<WorldSpace>,
@@ -14,8 +14,8 @@ pub struct Frustum {
     pub fovy: f64,
     pub ncp: f64,
     pub fcp: f64,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
 }
 
 impl Frustum {
@@ -94,7 +94,8 @@ impl Frustum {
         )
     }
 
-    /// Calculate for a given screen space coordinate the corresponding ray origin and direction on the near clipping plane.
+    /// Calculate for a given screen space coordinate the corresponding
+    /// ray origin and direction on the near clipping plane.
     pub fn ray_from_ncp(
         &self,
         screen_coords: &Point2<ScreenSpace>,
@@ -118,5 +119,59 @@ impl Frustum {
 
     pub fn distance(&self, position: &Point3<WorldSpace>) -> f64 {
         (self.origin - *position).length() - self.ncp
+    }
+
+    pub fn iter(&self) -> FrustumIterator {
+        FrustumIterator {
+            frustum: self,
+            x: 0,
+            y: 0,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+pub struct FrustumIterator<'a> {
+    pub frustum: &'a Frustum,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+}
+
+impl<'a> Iterator for FrustumIterator<'a> {
+    type Item = (usize, usize, Point3<WorldSpace>, Vec3<WorldSpace>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.x >= self.width {
+            self.x = 0;
+            self.y += 1;
+        }
+
+        if self.y >= self.height {
+            None
+        } else {
+            let (ro, rd) = self
+                .frustum
+                .ray_from_ncp(&Point2::<ScreenSpace>::new(
+                    self.x as f64,
+                    self.y as f64,
+                ))
+                .expect("Fatal: Point not in screen space.");
+
+            let p = (self.x, self.y, ro, rd);
+
+            self.x += 1;
+
+            Some(p)
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            self.width * self.height - (self.x + self.y * self.width),
+            Some(self.width * self.height),
+        )
     }
 }
